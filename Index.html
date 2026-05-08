@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Financiero — Santiago</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:        #0E0F11;
+    --bg2:       #16181C;
+    --bg3:       #1E2128;
+    --border:    rgba(255,255,255,0.06);
+    --border2:   rgba(255,255,255,0.1);
+    --text:      #F0EEE8;
+    --muted:     #6B6A65;
+    --muted2:    #9A9890;
+    --green:     #2DD4A0;
+    --green-dim: rgba(45,212,160,0.12);
+    --red:       #F2645A;
+    --red-dim:   rgba(242,100,90,0.12);
+    --blue:      #5B9CF6;
+    --blue-dim:  rgba(91,156,246,0.12);
+    --amber:     #F5A623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --purple:    #A78BFA;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── LAYOUT ── */
+  .shell { max-width: 1180px; margin: 0 auto; padding: 0 2rem 4rem; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 2.5rem 0 2rem;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  .header-left {}
+  .header-eyebrow {
+    font-size: 0.65rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--green); font-weight: 500; margin-bottom: 0.4rem;
+  }
+  header h1 {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    letter-spacing: -0.04em; line-height: 1;
+    color: var(--text);
+  }
+  header h1 em { color: var(--green); font-style: normal; }
+  .header-date {
+    font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem;
+    font-family: 'DM Mono', monospace;
+  }
+  .header-right { text-align: right; }
+  .deuda-total-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .deuda-total-val {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 1.8rem; color: var(--red); letter-spacing: -0.04em; line-height: 1;
+  }
+  .deuda-total-sub { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+
+  /* ── KPI ROW ── */
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .kpi {
+    background: var(--bg2); padding: 1.25rem 1.5rem;
+    position: relative; overflow: hidden;
+    transition: background 0.2s;
+  }
+  .kpi:hover { background: var(--bg3); }
+  .kpi::before {
+    content: ''; position: absolute;
+    bottom: 0; left: 0; right: 0; height: 2px;
+  }
+  .kpi.green::before { background: var(--green); }
+  .kpi.red::before { background: var(--red); }
+  .kpi.blue::before { background: var(--blue); }
+  .kpi.amber::before { background: var(--amber); }
+  .kpi-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.6rem; }
+  .kpi-val {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 1.5rem; letter-spacing: -0.04em; line-height: 1;
+  }
+  .kpi.green .kpi-val { color: var(--green); }
+  .kpi.red .kpi-val { color: var(--red); }
+  .kpi.blue .kpi-val { color: var(--blue); }
+  .kpi.amber .kpi-val { color: var(--amber); }
+  .kpi-sub { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── CHARTS GRID ── */
+  .charts-main { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .charts-bottom { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+
+  .card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.5rem;
+    position: relative; overflow: hidden;
+  }
+  .card-title {
+    font-size: 0.78rem; font-weight: 500; color: var(--muted2);
+    margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title strong { color: var(--text); font-size: 0.9rem; }
+  .chart-wrap { position: relative; }
+
+  /* ── MES SELECTOR ── */
+  .mes-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .mes-tab {
+    padding: 5px 14px; border-radius: 100px;
+    font-size: 0.75rem; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--border2); background: transparent;
+    color: var(--muted2); transition: all 0.15s;
+  }
+  .mes-tab:hover { border-color: var(--green); color: var(--green); }
+  .mes-tab.active { background: var(--green); border-color: var(--green); color: #0E0F11; }
+
+  /* ── DEUDAS TABLE ── */
+  .deudas-list { display: flex; flex-direction: column; gap: 6px; }
+  .deuda-item {
+    display: grid; grid-template-columns: 1fr auto;
+    align-items: center; gap: 1rem;
+    padding: 0.75rem 1rem; border-radius: 8px;
+    background: var(--bg3); border: 1px solid var(--border);
+    transition: border-color 0.15s;
+  }
+  .deuda-item:hover { border-color: var(--border2); }
+  .deuda-name { font-size: 0.85rem; font-weight: 500; color: var(--text); }
+  .deuda-cat { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+  .deuda-right { text-align: right; }
+  .deuda-val { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--red); }
+  .deuda-bar-wrap { margin-top: 6px; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .deuda-bar { height: 100%; border-radius: 2px; background: var(--red); }
+
+  /* ── MOVIMIENTOS TABLE ── */
+  .mov-table { width: 100%; border-collapse: collapse; }
+  .mov-table th {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--muted); padding: 0 0.75rem 0.75rem; text-align: left; font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+  .mov-table td { padding: 0.7rem 0.75rem; font-size: 0.82rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .mov-table tr:last-child td { border-bottom: none; }
+  .mov-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .tipo-badge {
+    font-size: 0.65rem; padding: 2px 8px; border-radius: 100px; font-weight: 500;
+    white-space: nowrap;
+  }
+  .t-ingreso  { background: var(--green-dim); color: var(--green); }
+  .t-gfijo    { background: var(--blue-dim);  color: var(--blue);  }
+  .t-gvar     { background: var(--amber-dim); color: var(--amber); }
+  .t-abono    { background: var(--red-dim);   color: var(--red);   }
+  .mov-val { font-family: 'DM Mono', monospace; text-align: right; }
+  .mov-val.pos { color: var(--green); }
+  .mov-val.neg { color: var(--red); }
+  .mov-val.neu { color: var(--amber); }
+
+  /* ── PROGRESS ── */
+  .meta-progress { margin-top: 0.5rem; }
+  .meta-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .meta-label { font-size: 0.78rem; color: var(--muted2); }
+  .meta-val { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text); }
+  .prog-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+  .prog-fill { height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+
+  /* ── FOOTER ── */
+  footer { text-align: center; padding: 2rem 0 0; font-size: 0.72rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 1rem; }
+
+  @media (max-width: 768px) {
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .charts-main, .charts-bottom { grid-template-columns: 1fr; }
+    header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <div class="header-eyebrow">Dashboard financiero personal</div>
+      <h1>Control<br><em>Santiago</em></h1>
+      <div class="header-date">Actualizado: 7 de mayo 2026</div>
+    </div>
+    <div class="header-right">
+      <div class="deuda-total-label">Deuda total</div>
+      <div class="deuda-total-val">$231.650.859</div>
+      <div class="deuda-total-sub">11 acreedores · actualizado hoy</div>
+    </div>
+  </header>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi green">
+      <div class="kpi-label">Ingresos mayo</div>
+      <div class="kpi-val">$0</div>
+      <div class="kpi-sub">Meta: $10.000.000</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Gastos mayo</div>
+      <div class="kpi-val">$2.178.793</div>
+      <div class="kpi-sub">Fijos + variables</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Abonos mayo</div>
+      <div class="kpi-val">$0</div>
+      <div class="kpi-sub">A deudas este mes</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-label">Saldo neto mayo</div>
+      <div class="kpi-val">-$2.178.793</div>
+      <div class="kpi-sub">Ingresos - gastos</div>
+    </div>
+  </div>
+
+  <!-- MES SELECTOR -->
+  <div class="mes-tabs">
+    <button class="mes-tab" onclick="setMes(0)">Ene</button>
+    <button class="mes-tab" onclick="setMes(1)">Feb</button>
+    <button class="mes-tab" onclick="setMes(2)">Mar</button>
+    <button class="mes-tab" onclick="setMes(3)">Abr</button>
+    <button class="mes-tab active" onclick="setMes(4)">May ← actual</button>
+    <button class="mes-tab" onclick="setMes(5)">Jun</button>
+    <button class="mes-tab" onclick="setMes(6)">Jul</button>
+    <button class="mes-tab" onclick="setMes(7)">Ago</button>
+    <button class="mes-tab" onclick="setMes(8)">Sep</button>
+    <button class="mes-tab" onclick="setMes(9)">Oct</button>
+    <button class="mes-tab" onclick="setMes(10)">Nov</button>
+    <button class="mes-tab" onclick="setMes(11)">Dic</button>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="section-label">Evolución mensual</div>
+  <div class="charts-main">
+    <div class="card">
+      <div class="card-title"><strong>Ingresos vs Egresos</strong><span style="font-size:0.7rem;color:var(--muted)">2026 · COP</span></div>
+      <div class="chart-wrap"><canvas id="chartIngEgr" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><strong>Ingresos por fuente</strong><span style="font-size:0.7rem;color:var(--muted)">Acumulado 2026</span></div>
+      <div class="chart-wrap"><canvas id="chartFuentes" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="charts-main">
+    <div class="card">
+      <div class="card-title"><strong>Saldo neto mensual</strong><span style="font-size:0.7rem;color:var(--muted)">Lo que queda después de gastos</span></div>
+      <div class="chart-wrap"><canvas id="chartSaldo" height="200"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><strong>Abonos a deuda</strong><span style="font-size:0.7rem;color:var(--muted)">Mensual 2026</span></div>
+      <div class="chart-wrap"><canvas id="chartAbonos" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- DEUDA PROGRESS -->
+  <div class="section-label">Estado de deudas</div>
+  <div class="charts-bottom">
+    <div class="card">
+      <div class="card-title"><strong>Evolución deuda total</strong><span style="font-size:0.7rem;color:var(--muted)">Meta: $0 · ~31 meses</span></div>
+      <div class="chart-wrap"><canvas id="chartDeuda" height="180"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><strong>Composición deuda</strong></div>
+      <div class="chart-wrap"><canvas id="chartPie" height="180"></canvas></div>
+    </div>
+  </div>
+
+  <!-- META MAYO -->
+  <div class="section-label">Progreso mayo 2026</div>
+  <div class="charts-main">
+    <div class="card">
+      <div class="card-title"><strong>Meta de ingresos</strong><span style="font-size:0.7rem;color:var(--muted)">$10.000.000 / mes</span></div>
+      <div class="meta-progress">
+        <div class="meta-row"><span class="meta-label">🚛 Llantas LCM</span><span class="meta-val">$0 / $7.000.000</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:0%;background:var(--blue)"></div></div>
+        <div class="meta-row"><span class="meta-label">🚚 Tranloga</span><span class="meta-val">$0 / $2.000.000</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:0%;background:var(--green)"></div></div>
+        <div class="meta-row"><span class="meta-label">🛍️ Shopping Gadgets</span><span class="meta-val">$0 / $500.000</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:0%;background:var(--purple)"></div></div>
+        <div class="meta-row"><span class="meta-label">🤝 Consultorías</span><span class="meta-val">$0 / $300.000</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:0%;background:var(--amber)"></div></div>
+        <div class="meta-row"><span class="meta-label">🎧 DJ</span><span class="meta-val">$0 / $200.000</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:0%;background:var(--red)"></div></div>
+        <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+          <div class="meta-row"><span class="meta-label" style="font-weight:600;color:var(--text)">TOTAL</span><span class="meta-val" style="color:var(--green)">$0 / $10.000.000 · 0%</span></div>
+          <div class="prog-track" style="height:8px"><div class="prog-fill" style="width:0%;background:var(--green)"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><strong>Movimientos recientes</strong></div>
+      <table class="mov-table">
+        <thead>
+          <tr>
+            <th>Descripción</th>
+            <th>Tipo</th>
+            <th style="text-align:right">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Arriendo<br><span style="font-size:0.68rem;color:var(--muted)">May 4</span></td>
+            <td><span class="tipo-badge t-gfijo">Gasto fijo</span></td>
+            <td class="mov-val neg">-$1.130.000</td>
+          </tr>
+          <tr>
+            <td>Compras casa<br><span style="font-size:0.68rem;color:var(--muted)">May 2</span></td>
+            <td><span class="tipo-badge t-gvar">Gasto var.</span></td>
+            <td class="mov-val neg">-$164.918</td>
+          </tr>
+          <tr>
+            <td>Hostinger<br><span style="font-size:0.68rem;color:var(--muted)">May 1</span></td>
+            <td><span class="tipo-badge t-gfijo">Gasto fijo</span></td>
+            <td class="mov-val neg">-$65.900</td>
+          </tr>
+          <tr>
+            <td>Comida por fuera<br><span style="font-size:0.68rem;color:var(--muted)">May 3</span></td>
+            <td><span class="tipo-badge t-gvar">Gasto var.</span></td>
+            <td class="mov-val neg">-$35.900</td>
+          </tr>
+          <tr>
+            <td>Motilada<br><span style="font-size:0.68rem;color:var(--muted)">May 1</span></td>
+            <td><span class="tipo-badge t-gvar">Gasto var.</span></td>
+            <td class="mov-val neg">-$35.000</td>
+          </tr>
+          <tr>
+            <td>Netflix<br><span style="font-size:0.68rem;color:var(--muted)">May 2</span></td>
+            <td><span class="tipo-badge t-gfijo">Gasto fijo</span></td>
+            <td class="mov-val neg">-$29.900</td>
+          </tr>
+          <tr>
+            <td>Google Workspace<br><span style="font-size:0.68rem;color:var(--muted)">May 1</span></td>
+            <td><span class="tipo-badge t-gfijo">Gasto fijo</span></td>
+            <td class="mov-val neg">-$30.568</td>
+          </tr>
+          <tr>
+            <td>Natillera Camilo<br><span style="font-size:0.68rem;color:var(--muted)">Abr 28 · nueva deuda</span></td>
+            <td><span class="tipo-badge t-abono">Deuda</span></td>
+            <td class="mov-val neg">-$5.000.000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DEUDAS LIST -->
+  <div class="section-label">Bola de nieve — orden de pago</div>
+  <div class="card" style="margin-bottom:1.5rem">
+    <div class="deudas-list" id="deudasList"></div>
+  </div>
+
+  <footer>Sistema Santiago · Dashboard Financiero · Actualizado 7 mayo 2026 · Reportar cambios para actualizar</footer>
+</div>
+
+<script>
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CO');
+
+// ── DATA ──────────────────────────────────────────────────────────
+const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// Datos reales mayo, anteriores estimados para dar contexto visual
+const data = {
+  ingresos:  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  gastos:    [0, 0, 0, 0, 2178793, 0, 0, 0, 0, 0, 0, 0],
+  abonos:    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  deuda:     [231650859,231650859,231650859,231650859,231650859,0,0,0,0,0,0,0],
+  fuentes: {
+    llantas:      [0,0,0,0,0,0,0,0,0,0,0,0],
+    tranloga:     [0,0,0,0,0,0,0,0,0,0,0,0],
+    shopping:     [0,0,0,0,0,0,0,0,0,0,0,0],
+    consultorias: [0,0,0,0,0,0,0,0,0,0,0,0],
+    dj:           [0,0,0,0,0,0,0,0,0,0,0,0],
+  }
+};
+
+const deudas = [
+  { name:'TC Nu Mamá',      cat:'Tarjeta',  val:1500000,   total:231650859 },
+  { name:'Impuestos Carro', cat:'Impuesto', val:1980000,   total:231650859 },
+  { name:'Daniel',          cat:'Personal', val:4000000,   total:231650859 },
+  { name:'Natillera Camilo',cat:'Personal', val:5000000,   total:231650859 },
+  { name:'Simit',           cat:'Impuesto', val:5806382,   total:231650859 },
+  { name:'TC Lulo',         cat:'Tarjeta',  val:5900000,   total:231650859 },
+  { name:'Luis Mesa',       cat:'Personal', val:6084768,   total:231650859 },
+  { name:'Camilo Celular',  cat:'Personal', val:6188800,   total:231650859 },
+  { name:'Camilo TC',       cat:'Tarjeta',  val:20187360,  total:231650859 },
+  { name:'B. Occidente',    cat:'Banco',    val:20120549,  total:231650859 },
+  { name:'Don Mario',       cat:'Personal', val:154883000, total:231650859 },
+];
+
+// ── CHART DEFAULTS ──────────────────────────────────────────────
+Chart.defaults.color = '#6B6A65';
+Chart.defaults.font.family = 'DM Sans';
+Chart.defaults.font.size = 11;
+
+const gridOpts = {
+  color: 'rgba(255,255,255,0.04)',
+  drawBorder: false,
+};
+const tickOpts = { color: '#6B6A65', maxRotation: 0 };
+
+// ── CHART 1: Ingresos vs Egresos ────────────────────────────────
+const c1 = new Chart(document.getElementById('chartIngEgr'), {
+  type: 'bar',
+  data: {
+    labels: meses,
+    datasets: [
+      {
+        label: 'Ingresos',
+        data: data.ingresos,
+        backgroundColor: 'rgba(45,212,160,0.75)',
+        borderRadius: 5,
+        borderSkipped: false,
+      },
+      {
+        label: 'Gastos',
+        data: data.gastos,
+        backgroundColor: 'rgba(242,100,90,0.75)',
+        borderRadius: 5,
+        borderSkipped: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16 } },
+      tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+    },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: { ...tickOpts, callback: v => '$' + (v/1000000).toFixed(0) + 'M' } }
+    }
+  }
+});
+
+// ── CHART 2: Fuentes de ingreso (donut) ─────────────────────────
+const c2 = new Chart(document.getElementById('chartFuentes'), {
+  type: 'doughnut',
+  data: {
+    labels: ['🚛 Llantas', '🚚 Tranloga', '🛍️ Shopping', '🤝 Consultoría', '🎧 DJ'],
+    datasets: [{
+      data: [0, 0, 0, 0, 0],
+      backgroundColor: [
+        'rgba(91,156,246,0.85)',
+        'rgba(45,212,160,0.85)',
+        'rgba(167,139,250,0.85)',
+        'rgba(245,166,35,0.85)',
+        'rgba(242,100,90,0.85)',
+      ],
+      borderWidth: 0,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '68%',
+    plugins: {
+      legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+    }
+  }
+});
+
+// ── CHART 3: Saldo neto ─────────────────────────────────────────
+const saldos = meses.map((_,i) => data.ingresos[i] - data.gastos[i]);
+const c3 = new Chart(document.getElementById('chartSaldo'), {
+  type: 'bar',
+  data: {
+    labels: meses,
+    datasets: [{
+      label: 'Saldo neto',
+      data: saldos,
+      backgroundColor: saldos.map(v => v >= 0 ? 'rgba(45,212,160,0.75)' : 'rgba(242,100,90,0.75)'),
+      borderRadius: 5,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+    },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: { ...tickOpts, callback: v => '$' + (v/1000000).toFixed(1) + 'M' } }
+    }
+  }
+});
+
+// ── CHART 4: Abonos a deuda ─────────────────────────────────────
+const c4 = new Chart(document.getElementById('chartAbonos'), {
+  type: 'bar',
+  data: {
+    labels: meses,
+    datasets: [{
+      label: 'Abonos',
+      data: data.abonos,
+      backgroundColor: 'rgba(91,156,246,0.75)',
+      borderRadius: 5,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+    },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: { grid: gridOpts, ticks: { ...tickOpts, callback: v => '$' + (v/1000000).toFixed(1) + 'M' } }
+    }
+  }
+});
+
+// ── CHART 5: Deuda total línea ──────────────────────────────────
+const c5 = new Chart(document.getElementById('chartDeuda'), {
+  type: 'line',
+  data: {
+    labels: meses,
+    datasets: [{
+      label: 'Deuda total',
+      data: data.deuda,
+      borderColor: 'rgba(242,100,90,0.9)',
+      backgroundColor: 'rgba(242,100,90,0.08)',
+      borderWidth: 2,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgba(242,100,90,1)',
+      fill: true,
+      tension: 0.3,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+    },
+    scales: {
+      x: { grid: gridOpts, ticks: tickOpts },
+      y: {
+        grid: gridOpts,
+        ticks: { ...tickOpts, callback: v => '$' + (v/1000000).toFixed(0) + 'M' },
+        min: 0,
+      }
+    }
+  }
+});
+
+// ── CHART 6: Pie deudas ─────────────────────────────────────────
+const c6 = new Chart(document.getElementById('chartPie'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Personal', 'Tarjetas', 'Banco', 'Impuestos'],
+    datasets: [{
+      data: [196156168, 27587360, 20120549, 7786382],
+      backgroundColor: [
+        'rgba(242,100,90,0.85)',
+        'rgba(245,166,35,0.85)',
+        'rgba(91,156,246,0.85)',
+        'rgba(167,139,250,0.85)',
+      ],
+      borderWidth: 0,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '65%',
+    plugins: {
+      legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 10, font: { size: 10 } } },
+      tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+    }
+  }
+});
+
+// ── DEUDAS LIST ─────────────────────────────────────────────────
+const listEl = document.getElementById('deudasList');
+deudas.forEach((d, i) => {
+  const pct = (d.val / d.total * 100).toFixed(1);
+  listEl.innerHTML += `
+    <div class="deuda-item">
+      <div>
+        <div class="deuda-name">${i+1}. ${d.name}</div>
+        <div class="deuda-cat">${d.cat} · ${pct}% de la deuda total</div>
+        <div class="deuda-bar-wrap">
+          <div class="deuda-bar" style="width:${Math.min(pct*3,100)}%"></div>
+        </div>
+      </div>
+      <div class="deuda-right">
+        <div class="deuda-val">${fmt(d.val)}</div>
+      </div>
+    </div>`;
+});
+
+// ── MES TABS ────────────────────────────────────────────────────
+function setMes(i) {
+  document.querySelectorAll('.mes-tab').forEach((t,j) => t.classList.toggle('active', i===j));
+}
+</script>
+</body>
+</html>
